@@ -50,23 +50,14 @@ void colorToBitmap(xn::ImageMetaData& colorMD, cv::Mat& colorMat)
 {
     xn::RGB24Map& colorMap = colorMD.WritableRGB24Map();
 
-    // int bytespp = FreeImage_GetLine(dib) / FreeImage_GetWidth(dib);
-    // BYTE *bits = FreeImage_GetBits(dib);
-    // unsigned pitch = FreeImage_GetPitch(dib);
-
     for (XnUInt32 y = 0; y < colorMap.YRes(); y++) {
-        // BYTE *pixel = (BYTE *)bits;
         for (XnUInt32 x = 0; x < colorMap.XRes(); x++) {
-            // pixel[FI_RGBA_RED] = colorMap(x, y).nRed;
-            // pixel[FI_RGBA_GREEN] = colorMap(x, y).nGreen;
-            // pixel[FI_RGBA_BLUE] = colorMap(x, y).nBlue;
             cv::Vec3b& pixel = colorMat.at<cv::Vec3b>(y, x);
-            pixel[0] = colorMap(x, y).nRed;
+            pixel[0] = colorMap(x, y).nBlue;
             pixel[1] = colorMap(x, y).nGreen;
-            pixel[2] = colorMap(x, y).nBlue;
+            pixel[2] = colorMap(x, y).nRed;
         }
     }
-    // FreeImage_FlipVertical(dib);
 }
 
 void depthToBitmap(xn::DepthMetaData& depthMD, cv::Mat& depthMat)
@@ -74,13 +65,10 @@ void depthToBitmap(xn::DepthMetaData& depthMD, cv::Mat& depthMat)
     xn::DepthMap& depthMap = depthMD.WritableDepthMap();
 
     for (XnUInt32 y = 0; y < depthMap.YRes(); y++) {
-        // unsigned short *bits = (unsigned short *)FreeImage_GetScanLine(dib, y);
         for (XnUInt32 x = 0; x < depthMap.XRes(); x++) {
-            // bits[x] = depthMap(x, y);
             depthMat.at<uint16_t>(y, x) = depthMap(x, y);
         }
     }
-    // FreeImage_FlipVertical(dib);
 }
 
 int main(int argc, char* argv[])
@@ -129,8 +117,6 @@ int main(int argc, char* argv[])
     colorHeight = depthHeight = 480;
     colorWidth = depthWidth = 640;
 
-    // FIBITMAP* colorBitmap = FreeImage_Allocate(colorWidth, colorHeight, 24);
-    // FIBITMAP* depthBitmap = FreeImage_AllocateT(FIT_UINT16, depthWidth, depthHeight, 16);
     cv::Mat colorMat = cv::Mat::zeros(colorHeight, colorWidth, CV_8UC3);
     cv::Mat depthMat = cv::Mat::zeros(depthHeight, depthWidth, CV_16UC1);
 
@@ -160,8 +146,6 @@ int main(int argc, char* argv[])
         XnUInt64 depth_timestamp = depth_meta.Timestamp();
         long long diff = std::abs((long long)color_timestamp - (long long)depth_timestamp);
         
-        //std::cout << k << " " << color_timestamp << " " << depth_timestamp << " "
-        //    << color_meta.FrameID() << " " << depth_meta.FrameID() << std::endl;
 
         while (diff > kTimeDiff) {
             if (color_timestamp > depth_timestamp) {
@@ -199,10 +183,6 @@ int main(int argc, char* argv[])
 
         // Number frame ID again.
         // Ignore timestamp for now; just use the old timestamp.
-        //color_meta.FrameID() = k;
-        //depth_meta.FrameID() = k;
-        //color_meta.Timestamp() = XnUInt64(double(k) / 30.0 * 1000000);
-        //depth_meta.Timestamp() = XnUInt64(double(k) / 30.0 * 1000000);
 
             colorToBitmap(color_meta, colorMat);
             depthToBitmap(depth_meta, depthMat);
@@ -212,12 +192,9 @@ int main(int argc, char* argv[])
             sprintf(colorFilename, "%s/image/image%05d.png", dir.c_str(), k);
             sprintf(depthFilename, "%s/depth/depth%05d.png", dir.c_str(), k);
 
-            // FreeImage_Save(FIF_PNG, colorBitmap, colorFilename);
-            // FreeImage_Save(FIF_PNG, depthBitmap, depthFilename);
             cv::imwrite(colorFilename, colorMat);
             cv::imwrite(depthFilename, depthMat);
 
-            // TODO: remove timestamp from filename, and store into a text file. 
             // Format: frame ID - color timestamp - depth timestamp
 			fprintf(file_timestamp, "%d %lld %lld\n", k, color_meta.Timestamp(), depth_meta.Timestamp());
         
@@ -226,9 +203,6 @@ int main(int argc, char* argv[])
 
     printf("Recorded: %d frames. %d depth, %d color frames discarded.\n", k, discardDepthFrames, discardColorFrames);
 	fclose(file_timestamp);
-
-    // TODO: archive everything into a zero-compression zip file
-
 
     return 0;
 }
